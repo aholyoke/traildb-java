@@ -44,8 +44,8 @@
 				<!--  trigger javah -->
 				<javahOS>linux</javahOS>
 				<compilerProvider>generic-classic</compilerProvider>
-				<compilerExecutable>cc</compilerExecutable>
-				<linkerExecutable>cc</linkerExecutable>
+				<compilerExecutable>gcc</compilerExecutable>
+				<linkerExecutable>gcc</linkerExecutable>
 				<sources>
 				<source>
 					<directory>../src/main/native</directory>
