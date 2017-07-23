@@ -23,6 +23,11 @@ public class TestTrailDB extends TestCase {
 		cons.close();
 	}
 
+	public void testCircle() {
+		// Just setting up circle
+		assertEquals(1, 1);
+	}
+
 	public void testBasic() throws FileNotFoundException {
 		TrailDB tdb = new TrailDB("test.tdb");
 		TrailDBCursor cur = tdb.cursorNew();
