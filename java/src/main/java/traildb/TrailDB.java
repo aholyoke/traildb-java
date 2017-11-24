@@ -27,11 +27,11 @@ public class TrailDB {
 	public TrailDB(String root) throws FileNotFoundException {
 		this.root = root;
 		init(root);
-		long n = this.numFields();
+		long n = this.numFields() - 1;
 		this.fieldNames = new String[(int) n];
 		this.fieldMap = new HashMap<String, Integer>();
 		for (int i = 0; i < n; i++) {
-			this.fieldNames[i] = this.getFieldName(i);
+			this.fieldNames[i] = this.getFieldName(i + 1);
 			this.fieldMap.put(this.fieldNames[i], i);
 		}
 	}
