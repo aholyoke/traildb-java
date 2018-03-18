@@ -48,7 +48,7 @@ JNIEXPORT void JNICALL Java_traildb_TrailDBMultiTrail_init(JNIEnv *env, jobject 
 JNIEXPORT jstring JNICALL Java_traildb_TrailDBMultiTrail_getItem(JNIEnv *env, jobject obj, jint index) {
 	jclass exc;
 
-    const tdb *db;
+	const tdb *db;
 	const tdb_item *items;
 	const char *value;
 	char *tgt_value;
@@ -62,7 +62,7 @@ JNIEXPORT jstring JNICALL Java_traildb_TrailDBMultiTrail_getItem(JNIEnv *env, jo
 
 	items = (tdb_item *) fields->items;
 
-    if (items == 0L) {
+	if (items == 0L) {
 		exc = (*env)->FindClass(env, "java/lang/IllegalStateException");
 		if (exc == NULL) {
 			/* Could not find the exception - We are in so much trouble right now */
@@ -70,7 +70,7 @@ JNIEXPORT jstring JNICALL Java_traildb_TrailDBMultiTrail_getItem(JNIEnv *env, jo
 		}
 		(*env)->ThrowNew(env, exc, "Cursor is not pointing at an event");
 		return NULL;
-    }
+	}
 
 	if (index >= fields->num_items || index < 0) {
 		exc = (*env)->FindClass(env, "java/lang/IndexOutOfBoundsException");
@@ -111,9 +111,9 @@ JNIEXPORT jint JNICALL Java_traildb_TrailDBMultiTrail_getNumItems(JNIEnv *env, j
 
 	// Retrieve fields pointer
 
-    fields = (TrailDBMultiTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBMultiTrail_fields);
+	fields = (TrailDBMultiTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBMultiTrail_fields);
 
-    if (fields->items == 0L) {
+	if (fields->items == 0L) {
 		exc = (*env)->FindClass(env, "java/lang/IllegalStateException");
 		if (exc == NULL) {
 			/* Could not find the exception - We are in so much trouble right now */
@@ -121,9 +121,9 @@ JNIEXPORT jint JNICALL Java_traildb_TrailDBMultiTrail_getNumItems(JNIEnv *env, j
 		}
 		(*env)->ThrowNew(env, exc, "Cursor is not pointing at an event");
 		return 0;
-    }
+	}
 
-    return fields->num_items;
+	return fields->num_items;
 }
 
 /*
@@ -138,9 +138,9 @@ JNIEXPORT jlong JNICALL Java_traildb_TrailDBMultiTrail_getTimestamp(JNIEnv *env,
 
 	// Retrieve fields pointer
 
-    fields = (TrailDBMultiTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBMultiTrail_fields);
+	fields = (TrailDBMultiTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBMultiTrail_fields);
 
-    if (fields->items == 0L) {
+	if (fields->items == 0L) {
 		exc = (*env)->FindClass(env, "java/lang/IllegalStateException");
 		if (exc == NULL) {
 			/* Could not find the exception - We are in so much trouble right now */
@@ -148,9 +148,9 @@ JNIEXPORT jlong JNICALL Java_traildb_TrailDBMultiTrail_getTimestamp(JNIEnv *env,
 		}
 		(*env)->ThrowNew(env, exc, "Cursor is not pointing at an event");
 		return 0;
-    }
+	}
 
-    return fields->timestamp;
+	return fields->timestamp;
 }
 
 /*
