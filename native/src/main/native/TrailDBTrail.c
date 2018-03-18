@@ -1,18 +1,11 @@
 #include <traildb.h>
 #include <string.h>
 #include "traildb-java.h"
+#include "traildb-java-static.h"
 
 jfieldID FID_traildb_TrailDB_db;
 
-jfieldID FID_traildb_TrailDBTrail_db;
-
-jfieldID FID_traildb_TrailDBTrail_cur;
-
-jfieldID FID_traildb_TrailDBTrail_timestamp;
-
-jfieldID FID_traildb_TrailDBTrail_numItems;
-
-jfieldID FID_traildb_TrailDBTrail_items;
+jfieldID FID_traildb_TrailDBTrail_fields;
 
 jfieldID FID_traildb_filters_TrailDBEventFilter_f;
 
@@ -20,6 +13,8 @@ jfieldID FID_traildb_filters_TrailDBEventFilter_f;
 JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_init(JNIEnv * env, jobject obj, jobject tdb_obj, jlong trail_id) {
 	const tdb *db;
 	tdb_cursor *cur;
+
+	TrailDBTrailFields *fields = malloc(sizeof(TrailDBTrailFields));
 
 	// Retrieve db pointer
 
@@ -33,33 +28,55 @@ JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_init(JNIEnv * env, jobject obj,
 
 	tdb_get_trail(cur, trail_id);
 
-	// Store cur pointer on trail (obj.cur = cur)
+	fields->cur = (long) cur;
+	fields->db = (long) db;
+	fields->items = 0L;
 
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_cur, (long) cur);
-
-	// Store db pointer on trail (obj.db = db)
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_db, (long) db);
-
-	// Initialize items to NULL because we haven't called next yet
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_items, 0L);
+	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_fields, (long) fields);
 }
 
-JNIEXPORT jstring JNICALL Java_traildb_TrailDBTrail_native_1getItem(JNIEnv *env, jobject obj, jint index) {
+JNIEXPORT jstring JNICALL Java_traildb_TrailDBTrail_getItem(JNIEnv *env, jobject obj, jint index) {
+	jclass exc;
+
 	const tdb *db;
 	const tdb_item *items;
 	const char *value;
 	char *tgt_value;
 	uint64_t value_length;
 
+	TrailDBTrailFields *fields;
+
+	// Retrieve fields pointer
+
+    fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
+
 	// Retrieve items pointer
 
-	items = (tdb_item *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_items);
+	items = (tdb_item *) fields->items;
+
+    if (items == 0L) {
+		exc = (*env)->FindClass(env, "java/lang/IllegalStateException");
+		if (exc == NULL) {
+			/* Could not find the exception - We are in so much trouble right now */
+			exit(1);
+		}
+		(*env)->ThrowNew(env, exc, "Cursor is not pointing at an event");
+		return NULL;
+    }
+
+	if (index >= fields->num_items || index < 0) {
+		exc = (*env)->FindClass(env, "java/lang/IndexOutOfBoundsException");
+		if (exc == NULL) {
+			/* Could not find the exception - We are in so much trouble right now */
+			exit(1);
+		}
+		(*env)->ThrowNew(env, exc, "getItem out of bounds");
+		return NULL;
+	}
 
 	// Retrieve db pointer
 
-	db = (tdb *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_db);
+	db = (tdb *) fields->db;
 
 	// Get the value of the item
 
@@ -76,60 +93,101 @@ JNIEXPORT jstring JNICALL Java_traildb_TrailDBTrail_native_1getItem(JNIEnv *env,
 	return (*env)->NewStringUTF(env, tgt_value);
 }
 
+JNIEXPORT jint JNICALL Java_traildb_TrailDBTrail_getNumItems(JNIEnv *env, jobject obj) {
+	jclass exc;
+
+	TrailDBTrailFields *fields;
+
+	// Retrieve fields pointer
+
+    fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
+
+    if (fields->items == 0L) {
+		exc = (*env)->FindClass(env, "java/lang/IllegalStateException");
+		if (exc == NULL) {
+			/* Could not find the exception - We are in so much trouble right now */
+			exit(1);
+		}
+		(*env)->ThrowNew(env, exc, "Cursor is not pointing at an event");
+		return 0;
+    }
+
+    return fields->num_items;
+}
+
+JNIEXPORT jlong JNICALL Java_traildb_TrailDBTrail_getTimestamp(JNIEnv *env, jobject obj) {
+	jclass exc;
+
+	TrailDBTrailFields *fields;
+
+	// Retrieve fields pointer
+
+    fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
+
+    if (fields->items == 0L) {
+		exc = (*env)->FindClass(env, "java/lang/IllegalStateException");
+		if (exc == NULL) {
+			/* Could not find the exception - We are in so much trouble right now */
+			exit(1);
+		}
+		(*env)->ThrowNew(env, exc, "Cursor is not pointing at an event");
+		return 0;
+    }
+
+    return fields->timestamp;
+}
+
 JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_native_1getTrail(JNIEnv *env, jobject obj, jlong trail_id) {
-	tdb_cursor *cur;
+	TrailDBTrailFields *fields;
 
-	// Retrieve cursor pointer
+	// Retrieve fields pointer
 
-	cur = (tdb_cursor *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_cur);
+    fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
 
 	// Get trail from cursor
 
-	tdb_get_trail(cur, trail_id);
+	tdb_get_trail((tdb_cursor *) fields->cur, trail_id);
 
 	// Initialize items to NULL because we haven't called next yet
 
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_items, 0L);
+	fields->items = 0L;
 }
 
 JNIEXPORT jlong JNICALL Java_traildb_TrailDBTrail_getTrailLength(JNIEnv *env, jobject obj) {
-	tdb_cursor *cur;
-	uint64_t length;
+	TrailDBTrailFields *fields;
 
-	// Retrieve cursor pointer
+	// Retrieve fields pointer
 
-	cur = (tdb_cursor *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_cur);
+    fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
 
 	// Get trail length
 
-	length = tdb_get_trail_length(cur);
-
-	return length;
+	return tdb_get_trail_length((tdb_cursor *) fields->cur);
 }
 
 JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_setEventFilter(JNIEnv *env, jobject obj, jobject filter) {
 	jclass exc;
 
+	TrailDBTrailFields *fields;
 	struct tdb_event_filter *tgt_filter;
-	tdb_cursor *cur;
 	tdb_error err;
 
 	// Retrieve filter pointer
 
 	tgt_filter = (struct tdb_event_filter *) (*env)->GetLongField(env, filter, FID_traildb_filters_TrailDBEventFilter_f);
 
-	// Retrieve cursor pointer
+	// Retrieve fields pointer
 
-	cur = (tdb_cursor *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_cur);
+    fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
 
 	// Set the event filter on the cursor
 
-	err = tdb_cursor_set_event_filter(cur, tgt_filter);
+	err = tdb_cursor_set_event_filter((tdb_cursor *) fields->cur, tgt_filter);
 
 	if (err) {
 		exc = (*env)->FindClass(env, "java/io/IOException");
 		if (exc == NULL) {
-		/* Could not find the exception - We are in so much trouble right now */
+			/* Could not find the exception - We are in so much trouble right now */
 			exit(1);
 		}
 		(*env)->ThrowNew(env, exc, tdb_error_str(err));
@@ -138,53 +196,44 @@ JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_setEventFilter(JNIEnv *env, job
 }
 
 JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_unsetEventFilter(JNIEnv *env, jobject obj) {
-	tdb_cursor *cur;
+	TrailDBTrailFields *fields;
 
-	// Retrieve cursor pointer
+	// Retrieve fields pointer
 
-	cur = (tdb_cursor *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_cur);
+	fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
 
 	// Unset event filter
 
-	tdb_cursor_unset_event_filter(cur);
+	tdb_cursor_unset_event_filter((tdb_cursor *) fields->cur);
 
 }
 
 JNIEXPORT jobject JNICALL Java_traildb_TrailDBTrail_next(JNIEnv *env, jobject obj) {
-	jobject event_obj;
+	TrailDBTrailFields *fields;
 
-	tdb_cursor *cur;
 	const tdb_event *event;
 
-	// Retrieve cursor pointer
+	// Retrieve fields pointer
 
-	cur = (tdb_cursor *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_cur);
+	fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
 
 	// Get event
 
-	event = tdb_cursor_next(cur);
+	event = tdb_cursor_next((tdb_cursor *) fields->cur);
 
 	// Check if end of trail
 
 	if (event == NULL) {
-	  (*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_timestamp, 0L);
-	  (*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_numItems, 0L);
-	  (*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_items, 0L);
+		fields->timestamp = 0L;
+		fields->num_items = 0L;
+		fields->items = 0L;
 
 		return NULL;
 	}
 
-	// Store timestamp
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_timestamp, (long) event->timestamp);
-
-	// Store number of items
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_numItems, (long) event->num_items);
-
-	// Store items pointer
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_items, (long) event->items);
+	fields->timestamp = (long) event->timestamp;
+	fields->num_items = (long) event->num_items;
+	fields->items = (long) event->items;
 
     // Return self for convenience
 
@@ -192,40 +241,31 @@ JNIEXPORT jobject JNICALL Java_traildb_TrailDBTrail_next(JNIEnv *env, jobject ob
 }
 
 JNIEXPORT jobject JNICALL Java_traildb_TrailDBTrail_peek(JNIEnv *env, jobject obj) {
-	jobject event_obj;
+	TrailDBTrailFields *fields;
 
-	tdb_cursor *cur;
 	const tdb_event *event;
 
-	// Retrieve cursor pointer
+	// Retrieve fields pointer
 
-	cur = (tdb_cursor *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_cur);
+	fields = (TrailDBTrailFields *) (*env)->GetLongField(env, obj, FID_traildb_TrailDBTrail_fields);
 
 	// Get event
 
-	event = tdb_cursor_peek(cur);
+	event = tdb_cursor_peek((tdb_cursor *) fields->cur);
 
 	// Check if end of trail
 
 	if (event == NULL) {
-	  (*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_timestamp, 0L);
-	  (*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_numItems, 0L);
-	  (*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_items, 0L);
+		fields->timestamp = 0L;
+		fields->num_items = 0L;
+		fields->items = 0L;
 
 		return NULL;
 	}
 
-	// Store timestamp
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_timestamp, (long) event->timestamp);
-
-	// Store number of items
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_numItems, (long) event->num_items);
-
-	// Store items pointer
-
-	(*env)->SetLongField(env, obj, FID_traildb_TrailDBTrail_items, (long) event->items);
+	fields->timestamp = (long) event->timestamp;
+	fields->num_items = (long) event->num_items;
+	fields->items = (long) event->items;
 
     // Return self for convenience
 
@@ -238,17 +278,7 @@ JNIEXPORT void JNICALL Java_traildb_TrailDBTrail_initIDs(JNIEnv *env, jclass cls
 
 	jclass traildb_filters_TrailDBEventFilter = (*env)->FindClass(env, "traildb/filters/TrailDBEventFilter");
 
-	FID_traildb_TrailDB_db = (*env)->GetFieldID(env, traildb_TrailDB, "db", "J");
-
-	FID_traildb_TrailDBTrail_db = (*env)->GetFieldID(env, cls, "db", "J");
-
-	FID_traildb_TrailDBTrail_cur = (*env)->GetFieldID(env, cls, "cur", "J");
-
-	FID_traildb_TrailDBTrail_timestamp = (*env)->GetFieldID(env, cls, "timestamp", "J");
-
-	FID_traildb_TrailDBTrail_numItems = (*env)->GetFieldID(env, cls, "numItems", "J");
-
-	FID_traildb_TrailDBTrail_items = (*env)->GetFieldID(env, cls, "items", "J");
+	FID_traildb_TrailDBTrail_fields = (*env)->GetFieldID(env, cls, "fields", "J");
 
 	FID_traildb_filters_TrailDBEventFilter_f = (*env)->GetFieldID(env, traildb_filters_TrailDBEventFilter, "f", "J");
 
