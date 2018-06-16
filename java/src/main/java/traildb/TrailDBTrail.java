@@ -2,17 +2,8 @@ package traildb;
 
 import traildb.filters.TrailDBEventFilter;
 
-public class TrailDBTrail
-{
-	private long timestamp;
-
-	private long numItems;
-
-	private long items;
-
-	private long db;
-
-	private long cur;
+public class TrailDBTrail {
+	private long fields;
 
 	private long currentTrail;
 
@@ -31,16 +22,18 @@ public class TrailDBTrail
 	 * @param i index of item to get
 	 * @return The item value
 	 */
-	public String getItem(int i) {
-		if (i >= numItems || i < 0) {
-			throw new IndexOutOfBoundsException("getItem(" + i + ") but numItems in event is " + numItems);
-		}
-		return native_getItem(i);
-	}
+	public native String getItem(int i);
 
-	private native String native_getItem(int i);
+	/**
+	 * Get number of items the event has
+	 * @return number of items
+	 */
+	public native int getNumItems();
+
+	public native long getTimestamp();
 
 	public String[] getItems() {
+		int numItems = getNumItems();
 		String[] output = new String[(int) numItems];
 		for (long i = 0; i < numItems; i++) {
 			output[(int) i] = getItem((int) i);
@@ -91,24 +84,6 @@ public class TrailDBTrail
 	public native TrailDBTrail next();
 
 	public native TrailDBTrail peek();
-
-	public long getTimestamp() {
-		if (items == 0) {
-			throw new IllegalStateException("Cursor is not pointing at an event");
-		}
-		return timestamp;
-	}
-
-	/**
-	 * Get number of items the event has
-	 * @return number of items
-	 */
-	public long getNumItems() {
-		if (items == 0) {
-			throw new IllegalStateException("Cursor is not pointing at an event");
-		}
-		return numItems;
-	}
 
 	private static native void initIDs();
 

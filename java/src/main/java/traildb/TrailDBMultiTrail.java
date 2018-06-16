@@ -1,17 +1,8 @@
 package traildb;
 
 public class TrailDBMultiTrail {
-	public long cursorIndex;
 
-	private long timestamp;
-
-	private long numItems;
-
-	private long items;
-
-	private long cur;
-
-	private long db;
+	private long fields;
 
 	public TrailDBMultiTrail(TrailDBTrail[] trails) {
 		init(trails);
@@ -24,14 +15,15 @@ public class TrailDBMultiTrail {
 	 * @param i index of item to get
 	 * @return The item value
 	 */
-	public String getItem(int i) {
-		if (i >= numItems || i < 0) {
-			throw new IndexOutOfBoundsException("getItem(" + i + ") but numItems in event is " + numItems);
-		}
-		return native_getItem(i);
-	}
+	public native String getItem(int i);
 
-	private native String native_getItem(int i);
+	/**
+	 * Get number of items the event has
+	 * @return number of items
+	 */
+	public native int getNumItems();
+
+	public native long getTimestamp();
 
 	public native void free();
 
@@ -42,20 +34,6 @@ public class TrailDBMultiTrail {
 	public native TrailDBMultiTrail[] nextBatch(int maxEvents);
 
 	public native TrailDBMultiTrail peek();
-
-	public long getTimestamp() {
-		if (items == 0) {
-			// throw new IllegalStateException("Cursor is not pointing at an event");
-		}
-		return timestamp;
-	}
-
-	public long getNumItems() {
-		if (items == 0) {
-			// throw new IllegalStateException("Cursor is not pointing at an event");
-		}
-		return numItems;
-	}
 
 	private static native void initIDs();
 
